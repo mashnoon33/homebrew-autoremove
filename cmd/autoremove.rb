@@ -1,4 +1,7 @@
 require "formula"
+require "cli/parser"
+require "cask/cmd/KombuchaList"
+require "cmd/list"
 
 module Homebrew
   module_function
@@ -14,6 +17,9 @@ module Homebrew
              description: "Just print what would be removed."
       switch "-f", "--force",
              description: "Remove without confirmation."
+      switch "--versions",
+      description: "Show the version number for installed formulae, or only the specified "\
+                  "formulae if <formula> are provided."
     end
   end
 
@@ -33,32 +39,38 @@ module Homebrew
     removable_formulae
   end
 
+  def get_all_apps(installed_formulae)
+    all_apps = []
+
+   
+    installed_formulae
+  end 
+
+  def list_casks(args:)
+    Cask::Cmd::List.list_casks(
+      *args.named.to_casks,
+      one:       args.public_send(:'1?'),
+      full_name: args.full_name?,
+      versions:  args.versions?,
+    )
+  end
+
+  def list_formulaes(args:)
+    list.list(
+      one:       args.public_send(:'1?'),
+      full_name: args.full_name?,
+      versions:  args.versions?,
+    )
+  end
+
   def autoremove
     args = autoremove_args.parse
 
-    removable_formulae = get_removable_formulae(Formula.installed)
+   
+    list_casks(args: args)
+    list_formulaes(args: args)
 
-    return if removable_formulae.empty?
 
-    formulae_names = removable_formulae.map(&:full_name)
 
-    oh1 "Formulae that could be removed: " \
-      "#{formulae_names.sort.map(&Formatter.method(:identifier)).to_sentence}",
-      truncate: false
-
-    return if args.dry_run?
-
-    unless args.force?
-      ohai "Proceed?", <<~EOF
-        Enter:  yes
-        CTRL-C: no
-
-        To mark formulae as not removable run:
-            brew install PACKAGE
-      EOF
-      readline
-    end
-
-    system HOMEBREW_BREW_FILE, "rm", *formulae_names
   end
 end
